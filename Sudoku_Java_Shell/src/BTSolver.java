@@ -62,7 +62,71 @@ public class BTSolver
 	 */
 	private boolean forwardChecking ( )
 	{
-		return false;
+		// Iteration 2
+		for (Constraint c : network.getModifiedConstraints()) {
+			for (Variable v : c.vars) {
+				if (v.isAssigned()) {
+					for (Variable neighbor : network.getNeighborsOfVariable(v)) {
+						if (neighbor.getDomain().contains(v.getAssignment())) {
+							trail.push(neighbor);
+							neighbor.removeValueFromDomain(v.getAssignment());
+						}
+						if (neighbor.size() == 0) {
+							return false;
+						}
+					}
+				}
+				if (!c.isConsistent()) {
+					return false;
+				}
+			}
+		}
+		return true;
+
+		// // Iteration 1
+		// for (Variable v : network.getVariables()) {
+		// 	if (v.isModified()) {
+		// 		List<Variable> neighbors = network.getNeighborsOfVariable(v);
+		// 		for (Variable neighbor : neighbors) {
+		// 			if (neighbor.getValues().contains(v.getAssignment())) {
+		// 				trail.push(neighbor);
+		// 				neighbor.removeValueFromDomain(v.getAssignment());
+		// 			}
+		// 			if (neighbor.size() == 0) {
+		// 				return false;
+		// 			}
+		// 		}
+		// 		v.setModified(false);
+		// 		for (Constraint c : network.getConstraintsContainingVariable(v)) {
+		// 			if (!c.isConsistent()) {
+		// 				return false;
+		// 			}
+		// 		}
+		// 	}
+		// }
+		// return true;
+
+		// // Iteration 0
+		// for (Constraint c : network.getModifiedConstraints()) {
+		// 	for (Variable v : c.vars) {
+		// 		if (v.isAssigned()) {
+		// 			List<Variable> neighbors = network.getNeighborsOfVariable(v);
+		// 			for (Variable neighbor : neighbors) {
+		// 				if (neighbor.getValues().contains(v.getAssignment())) {
+		// 					trail.push(neighbor);
+		// 					neighbor.removeValueFromDomain(v.getAssignment());
+		// 				}
+		// 				if (neighbor.size() == 0) {
+		// 					return false;
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// 	if (!c.isConsistent()) {
+		// 		return false;
+		// 	}
+		// }
+		// return true;
 	}
 
 	/**
@@ -118,7 +182,15 @@ public class BTSolver
 	 */
 	private Variable getMRV ( )
 	{
-		return null;
+		Variable minVar = null;
+		for (Variable v : network.getVariables()) {
+			if (!v.isAssigned()) {
+				if (minVar == null || v.size() < minVar.size()) {
+					minVar = v;
+				}
+			}
+		}
+		return minVar;
 	}
 
 	/**
@@ -185,7 +257,45 @@ public class BTSolver
 	 */
 	public List<Integer> getValuesLCVOrder ( Variable v )
 	{
-		return null;
+		/**
+		* Initialize a HashMap with v's domain and iterate through v's
+		* neighbors, and increment each variable by 1 every time a
+		* neighbor's variable has the same value in its domain.
+		*/
+		HashMap<Integer, Integer> map = new HashMap<>();
+		for (int value : v.getValues()) {
+			map.put(value, 0);
+		}
+		for (Variable neighbor : network.getNeighborsOfVariable(v)) {
+			for (int neighborVal : neighbor.getDomain()) {
+				if (map.containsKey(neighborVal)) {
+					map.put(neighborVal, map.get(neighborVal)+1);
+				}
+			}
+		}
+
+		/**
+		* Create an ArrayList out of the map and sort it by the map
+		* values (i.e. sort by the counter of how many other neighboring
+		* variables share the same values).
+		*/
+		List<Map.Entry<Integer, Integer>> LCVList = new ArrayList<
+		Map.Entry<Integer, Integer>>(map.entrySet());
+
+		Collections.sort(LCVList, new Comparator<Map.Entry<Integer, 
+			Integer>>() {
+			public int compare(Map.Entry<Integer, Integer> entry1,
+				Map.Entry<Integer, Integer> entry2) {
+				return entry1.getValue().compareTo(entry2.getValue());
+			}
+		});
+
+		// Copy the sorted map's keys into an array and return array
+		List<Integer> sortedLCVList = new ArrayList<Integer>();
+		for (Map.Entry<Integer, Integer> entry : LCVList) {
+			sortedLCVList.add(entry.getKey());
+		}
+		return sortedLCVList;
 	}
 
 	/**
